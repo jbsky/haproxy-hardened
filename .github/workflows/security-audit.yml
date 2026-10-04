@@ -1,0 +1,19 @@
+# security-audit -- audit hebdomadaire de l'image publiee (gabarit hardened-ci).
+name: security-audit
+
+on:
+  schedule:
+    - cron: '0 3 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    uses: jbsky/hardened-ci/.github/workflows/security-audit.yml@023e9d7df1c0d9838e0a393f359add147d008c05 # v1.0.2
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+      issues: write

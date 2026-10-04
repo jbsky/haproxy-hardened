@@ -1,0 +1,23 @@
+# image-manifest v3
+# image : haproxy-hardened
+# genere par scripts/image-manifest.py -- ne pas editer a la main
+
+f 0644 0:0 - etc/group
+f 0644 0:0 - etc/image-versions
+f 0644 0:0 - etc/passwd
+f 0644 0:0 - etc/ssl/openssl.cnf
+f 0755 0:0 elf lib/ld-musl-x86_64.so.1
+l lib/libc.musl-x86_64.so.1 -> ld-musl-x86_64.so.1
+f 0755 0:0 elf sbin/tini
+f 0755 0:0 elf usr/lib/libcrypto.so.3
+l usr/lib/libpcre2-8.so.0 -> libpcre2-8.so.0.<version>
+f 0755 0:0 elf usr/lib/libpcre2-8.so.0.<version>
+f 0755 0:0 elf usr/lib/libssl.so.3
+f 0755 0:0 elf usr/local/bin/init
+f 0755 0:0 elf usr/sbin/haproxy
+
+present etc/ssl/certs/
+count 1 run/
+count 2 usr/local/etc/
+count 624 usr/share/
+count 2 var/

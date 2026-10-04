@@ -1,0 +1,5 @@
+{
+  "haproxy": "3.4.6",
+  "haproxy_sha256": "791e1815f8af6e8b850a227a9a0a190f3d3478c9e8d38a0f51c98b7f4bfe368b",
+  "alpine": "3.24"
+}

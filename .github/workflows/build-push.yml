@@ -1,0 +1,44 @@
+# =====================================================================
+#  build-push -- tout le pipeline vient du gabarit de jbsky/hardened-ci.
+#  Ce depot ne decrit que ce qui le distingue : .github/hardened-ci.json
+#  (image, version, entrees du compteur de revision, plateformes, sondes,
+#  tests). Le filtre paths: doit couvrir les entrees du compteur : le
+#  gabarit le controle (hci-config.py --check).
+# =====================================================================
+name: build-push
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+    paths:
+      - 'Dockerfile'
+      - 'conf/**'
+      - 'init.go'
+      - 'init_test.go'
+      - 'go.mod'
+      - 'versions.json'
+      - 'image.manifest'
+      - 'scripts/**'
+      - '.github/hardened-ci.json'
+      - '.github/workflows/build-push.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pipeline:
+    uses: jbsky/hardened-ci/.github/workflows/build-push.yml@023e9d7df1c0d9838e0a393f359add147d008c05 # v1.0.2
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      security-events: write
+      issues: write
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

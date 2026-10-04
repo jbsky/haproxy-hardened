@@ -1,0 +1,30 @@
+# =====================================================================
+#  haproxy-hardened -- tests locaux et CI (le gabarit build-push fait
+#  `up --no-build` sur l'image a tester). En production, l'image tourne
+#  sous Podman sur VyOS : ce fichier n'est pas un deploiement.
+# =====================================================================
+x-common-security: &common-security
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  tmpfs:
+    - /tmp:mode=1777
+    - /run/haproxy:mode=0750,uid=4430,gid=4430
+
+services:
+  haproxy:
+    <<: *common-security
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Interpolees meme sans build (up --no-build, logs, down) : jamais de
+      # ${VAR:?}, le garde du Dockerfile fait la regle.
+      args:
+        HAPROXY_VERSION: ${HAPROXY_VERSION:-}
+        HAPROXY_SHA256: ${HAPROXY_SHA256:-}
+    image: ${IMAGE:-docker.io/jbsky/haproxy-hardened:latest}
+    container_name: haproxy
+    ports:
+      - "127.0.0.1:8080:8080"

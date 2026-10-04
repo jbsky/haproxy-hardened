@@ -1,0 +1,28 @@
+{
+  "image": "haproxy-hardened",
+  "version": {
+    "key": "haproxy"
+  },
+  "revision": [
+    "haproxy",
+    "Dockerfile",
+    "conf/",
+    "init.go",
+    "go.mod",
+    "versions.json"
+  ],
+  "platforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "compose_service": "haproxy",
+  "probes": [
+    {
+      "label": "HAProxy",
+      "want": "version",
+      "cmd": "docker run --rm --entrypoint /usr/sbin/haproxy \"$IMAGE\" -v",
+      "regex": "HAProxy version \\K[0-9][0-9.]*"
+    }
+  ],
+  "smoke": "./scripts/test.sh \"$IMAGE\""
+}
