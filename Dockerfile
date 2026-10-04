@@ -15,6 +15,11 @@
 #
 #  Aucune version n'est ecrite ici : versions.json est la seule source
 #  (scripts/versions-build-args.py, verifie au job lint).
+#
+#  Revision 1 : la 0 a ete publiee sur GHCR seul, avant que les secrets
+#  Docker Hub du depot existent ; la garde de tag immuable ne consulte que
+#  GHCR, une relance n'aurait donc jamais promu vers Docker Hub. Un commit
+#  d'entree produit 3.4.6.1, promue sur les deux registres.
 # =====================================================================
 
 # ---------------------------------------------------------------------
