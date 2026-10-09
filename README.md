@@ -44,7 +44,7 @@ le tag qui porte le compteur.**
 <!-- BEGIN:tags (genere par la CI -- ne pas editer a la main) -->
 | Image | Version amont | Tag immuable a epingler |
 |-------|---------------|-------------------------|
-| `jbsky/haproxy-hardened` | `3.4.6` | `3.4.6.1` |
+| `jbsky/haproxy-hardened` | `3.4.6` | `3.4.6.2` |
 <!-- END:tags -->
 
 Le compteur compte les commits qui touchent les entrees de l'image
