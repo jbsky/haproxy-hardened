@@ -83,8 +83,12 @@ ok "TLS (curl : $proto)"
 [ "$(curl -fsS --noproxy '*' "http://$HTTP/api/vX/x")" = "http" ] || ko "ACL PCRE2 (negatif)"
 ok "ACL a expression reguliere (PCRE2)"
 
-docker exec "$NOM" haproxy -vv 2>/dev/null | grep -q 'OpenSSL' || ko "haproxy -vv sans OpenSSL"
-ok "$(docker exec "$NOM" haproxy -v 2>/dev/null | head -1 | cut -c1-60)"
+# Sortie capturee AVANT le grep : avec pipefail, `| grep -q` sort a la 1re
+# correspondance (USE_OPENSSL, ligne 2) et `haproxy -vv` meurt de SIGPIPE
+# (141) s'il ecrit encore -- echec aleatoire (PR #2, 2026-10-09).
+VV=$(docker exec "$NOM" haproxy -vv 2>/dev/null)
+grep -q 'OpenSSL' <<<"$VV" || ko "haproxy -vv sans OpenSSL"
+ok "$(head -1 <<<"$VV" | cut -c1-60)"
 
 # Une configuration cassee ne doit PAS demarrer.
 mkdir -p "$TMP/ko"
