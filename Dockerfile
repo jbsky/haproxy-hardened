@@ -25,7 +25,7 @@
 # ---------------------------------------------------------------------
 #  builder : telechargement verifie + compilation durcie
 # ---------------------------------------------------------------------
-FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS builder
+FROM alpine:3.24@sha256:3f4d6b32e26703c6082839234f43769d5046b3ac7c910033911d1e71d8cd630a AS builder
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 ARG HAPROXY_VERSION
 ARG HAPROXY_SHA256
@@ -82,7 +82,7 @@ RUN find /out -type f \( -name '*.so*' -o -perm -111 \) > /tmp/cand.list \
 # ---------------------------------------------------------------------
 #  gobuilder : init statique (entrypoint, healthcheck, setup-dirs)
 # ---------------------------------------------------------------------
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb AS gobuilder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18 AS gobuilder
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /build
@@ -93,7 +93,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags
 #  prep : arborescence runtime + cloture de dependances
 #  Le gabarit build-push construit et scanne ce stage a part (Trivy, SBOM).
 # ---------------------------------------------------------------------
-FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS prep
+FROM alpine:3.24@sha256:3f4d6b32e26703c6082839234f43769d5046b3ac7c910033911d1e71d8cd630a AS prep
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 # apk upgrade d'abord : `apk add` ne met jamais a jour un paquet deja dans la
 # base (libcrypto3, musl...).
