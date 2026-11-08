@@ -25,7 +25,7 @@
 # ---------------------------------------------------------------------
 #  builder : telechargement verifie + compilation durcie
 # ---------------------------------------------------------------------
-FROM alpine:3.24@sha256:3f4d6b32e26703c6082839234f43769d5046b3ac7c910033911d1e71d8cd630a AS builder
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS builder
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 ARG HAPROXY_VERSION
 ARG HAPROXY_SHA256
@@ -93,7 +93,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags
 #  prep : arborescence runtime + cloture de dependances
 #  Le gabarit build-push construit et scanne ce stage a part (Trivy, SBOM).
 # ---------------------------------------------------------------------
-FROM alpine:3.24@sha256:3f4d6b32e26703c6082839234f43769d5046b3ac7c910033911d1e71d8cd630a AS prep
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS prep
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 # apk upgrade d'abord : `apk add` ne met jamais a jour un paquet deja dans la
 # base (libcrypto3, musl...).
