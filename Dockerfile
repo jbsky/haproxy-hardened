@@ -82,7 +82,7 @@ RUN find /out -type f \( -name '*.so*' -o -perm -111 \) > /tmp/cand.list \
 # ---------------------------------------------------------------------
 #  gobuilder : init statique (entrypoint, healthcheck, setup-dirs)
 # ---------------------------------------------------------------------
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18 AS gobuilder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:eb61c3873c97416fff0116553fff65d67a3549f72e11d9758849a689cdd8b523 AS gobuilder
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /build
