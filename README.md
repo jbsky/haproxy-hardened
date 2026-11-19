@@ -1,45 +1,56 @@
 # HAProxy Hardened
 
-HAProxy compile depuis les sources, dans une image `FROM scratch` : ni shell, ni
-gestionnaire de paquets, ni OS. Uniquement HAProxy, ses bibliotheques (OpenSSL,
-PCRE2, musl), `tini` et un init Go statique.
+[![Build](https://github.com/jbsky/haproxy-hardened/actions/workflows/build-push.yml/badge.svg)](https://github.com/jbsky/haproxy-hardened/actions/workflows/build-push.yml)
+[![Docker Hub](https://img.shields.io/docker/v/jbsky/haproxy-hardened?sort=semver&label=Docker%20Hub)](https://hub.docker.com/r/jbsky/haproxy-hardened)
+[![Hardening](https://img.shields.io/badge/hardening-platine-blueviolet)](https://github.com/jbsky/haproxy-hardened#hardening)
 
-## Ce qui est compile
+HAProxy <!--v:haproxy-hardened-->3.4.6<!--/v--> built from source, in a `FROM scratch`
+image: no shell, no package manager, no OS. Only HAProxy, its libraries
+(OpenSSL, PCRE2, musl), `tini` and a static Go init. Meant for a TLS-terminating
+reverse proxy.
 
-Les options du paquet Alpine (aucun patch), **moins** ce qu'une configuration de
-reverse-proxy TLS n'utilise pas :
+## What is built
 
-| Option | Etat | Pourquoi |
+The options of the Alpine package (no patch), **minus** what a TLS
+reverse-proxy configuration does not use:
+
+| Option | Built | Why |
 |---|---|---|
-| OpenSSL | oui | terminaison TLS |
-| PCRE2 + JIT | oui | ACL a expressions regulieres |
-| SLZ | oui | compression, integree a HAProxy (pas de zlib) |
-| Lua, QUIC, namespaces, exporteur Prometheus, zlib | **non** | moins de code expose, moins de bibliotheques |
-| provider OpenSSL `legacy` | **non** | algorithmes retires (MD4, RC4, DES...) |
+| OpenSSL | yes | TLS termination |
+| PCRE2 + JIT | yes | regular-expression ACLs |
+| SLZ | yes | compression, built into HAProxy (no zlib) |
+| Lua, QUIC, namespaces, Prometheus exporter, zlib | **no** | less exposed code, fewer libraries |
+| OpenSSL `legacy` provider | **no** | retired algorithms (MD4, RC4, DES...) |
 
-Une option manque ? Elle s'ajoute dans le `make` du `Dockerfile`, avec sa
-bibliotheque dans le stage `prep` ; la cloture de dependances suit seule.
+An option is missing? It goes into the `make` line of the `Dockerfile`, with
+its library in the `prep` stage; the dependency closure follows on its own.
 
 ## Hardening
 
-- `FROM scratch`, utilisateur non-root `4430:4430`, aucune capacite par defaut.
-- Compilation : PIE, RELRO complet, `-fstack-protector-strong`,
-  `-fstack-clash-protection`, `_FORTIFY_SOURCE=2`, pile non executable ; binaire
-  strippe.
-- Archive amont verifiee par son sha256 (`versions.json`), dans le meme `RUN`
-  que son telechargement.
-- Bibliotheques copiees depuis une cloture resolue au build (`lddtree`), jamais
-  `/lib` ou `/usr/lib` en bloc.
-- L'init valide la configuration (`haproxy -c`) **avant** de demarrer : une
-  configuration cassee empeche le demarrage.
-- Fonctionne avec un rootfs en lecture seule (tmpfs sur `/tmp` et `/run/haproxy`).
+Tier **platine** (OCI label `security.hardening.tier`): a `FROM scratch` image
+with no shell and no package manager, a non-root user, a static Go init behind
+`tini` as PID 1, and binaries built with hardening flags.
+
+- Non-root user `4430:4430`, no capability by default.
+- Compiler flags: PIE, full RELRO, `-fstack-protector-strong`,
+  `-fstack-clash-protection`, `_FORTIFY_SOURCE=2`, non-executable stack;
+  stripped binary.
+- Upstream tarball verified against its sha256 (`versions.json`), in the same
+  `RUN` as its download.
+- Libraries copied from a dependency closure resolved at build time
+  (`lddtree`), never `/lib` or `/usr/lib` wholesale.
+- The init validates the configuration (`haproxy -c`) **before** starting: a
+  broken configuration prevents the start.
+- Runs on a read-only rootfs (tmpfs on `/tmp` and `/run/haproxy`).
 
 ## Tags
 
-Trois tags par image : `latest` (dernier build de `main`), la version amont
-seule, et la version amont suffixee d'un **compteur de revision**. Les deux
-premiers sont **reecrits en place** a chaque rebuild. **En production, epinglez
-le tag qui porte le compteur.**
+Every image is published under three tags: `latest` (last build of `main`),
+the upstream version alone, and the upstream version followed by a **revision
+counter**. The first two are **overwritten in place** on every rebuild (Alpine
+update, CVE fix, configuration change), and the build they pointed to can no
+longer be pulled by them. **In production, pin the tag that carries the
+counter.**
 
 <!-- BEGIN:tags (genere par la CI -- ne pas editer a la main) -->
 | Image | Version amont | Tag immuable a epingler |
@@ -47,10 +58,22 @@ le tag qui porte le compteur.**
 | `jbsky/haproxy-hardened` | `3.4.6` | `3.4.6.11` |
 <!-- END:tags -->
 
-Le compteur compte les commits qui touchent les entrees de l'image
-(`Dockerfile`, `conf/`, `init.go`, `go.mod`, `versions.json`) et repart a zero a
-chaque nouvelle version d'HAProxy. `docker.io` et `ghcr.io` publient les memes
-tags avec le meme digest.
+This table, the versions quoted in the text and the tags in the examples are
+rendered by `update-readme-tags.sh` ([hardened-ci](https://github.com/jbsky/hardened-ci))
+after each publication: do not edit them by hand.
+
+The counter counts the commits that touch the image inputs (the `revision`
+list of [`.github/hardened-ci.json`](.github/hardened-ci.json)) since the last
+upstream version change, and restarts at `0` with each new upstream version. A
+commit that only touches `.github/` does not increment it.
+
+`docker.io` and `ghcr.io` publish the same tags with the same digest, for
+`linux/amd64` and `linux/arm64`. Each registry keeps the last six immutable
+tags of an image, so that superseded builds do not stay pullable: move your
+pin forward.
+
+There is no upstream version watch in this repository: a new HAProxy release
+is a manual bump of `versions.json`.
 
 ## Usage
 
@@ -61,45 +84,73 @@ docker run -d --name haproxy \
   --tmpfs /tmp:mode=1777 --tmpfs /run/haproxy:mode=0750,uid=4430,gid=4430 \
   -v ./haproxy:/usr/local/etc/haproxy:ro \
   -p 80:80 -p 443:443 \
-  jbsky/haproxy-hardened:latest
+  jbsky/haproxy-hardened:3.4.6.11
 ```
 
-- La configuration se monte sur `/usr/local/etc/haproxy/` ; l'image en livre une
-  minimale (port 8080, healthcheck) pour tester.
-- Les arguments peuvent etre passes sans le nom du binaire (`-W -f ...`) : l'init
-  ajoute `haproxy` devant.
-- Healthcheck : `GET http://127.0.0.1:8405/healthz` (un `monitor-uri` a prevoir
-  dans votre configuration, ou une autre URL via `HAPROXY_HEALTH_URL`).
-- Les fichiers montes (certificats compris) doivent etre lisibles par l'uid
-  `4430` : `chgrp 4430` + `chmod 640` sur les cles plutot qu'un `644`.
+- The configuration is mounted on `/usr/local/etc/haproxy/`; the image ships
+  a minimal one (port 8080, healthcheck) for testing.
+- Arguments can be passed without the binary name (`-W -f ...`): the init
+  puts `haproxy` in front.
+- Healthcheck: `GET http://127.0.0.1:8405/healthz`, a `monitor-uri` your
+  configuration must provide (or another URL through `HAPROXY_HEALTH_URL`).
+- Mounted files (certificates included) must be readable by uid `4430`:
+  `chgrp 4430` + `chmod 640` on keys rather than `644`.
 
-## Security & Verification
-
-Image signee par [cosign](https://github.com/sigstore/cosign) (keyless OIDC).
+## Build and test
 
 ```bash
-cosign verify \
-  --certificate-identity-regexp '^https://github.com/(jbsky/haproxy-hardened|jbsky/hardened-ci)/' \
-  --certificate-github-workflow-repository jbsky/haproxy-hardened \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  ghcr.io/jbsky/haproxy-hardened:latest
-
-COSIGN_REPOSITORY=ghcr.io/jbsky/haproxy-hardened \
-  cosign verify \
-  --certificate-identity-regexp '^https://github.com/(jbsky/haproxy-hardened|jbsky/hardened-ci)/' \
-  --certificate-github-workflow-repository jbsky/haproxy-hardened \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  docker.io/jbsky/haproxy-hardened:latest
+make build   # build args come from versions.json
+make test    # scripts/test.sh against the built image
+make check   # versions.json is the only place a version is written
 ```
 
-La chaine de CI vient de [jbsky/hardened-ci](https://github.com/jbsky/hardened-ci) :
-lint, build, scan CVE du stage `prep`, tests sur le digest exact (manifeste
-d'image, cloture, `scripts/test.sh`), signature, SBOM attestee, audit hebdomadaire.
+`scripts/test.sh` runs the image as in production (read-only rootfs, no
+capability, `no-new-privileges`, configuration mounted read-only) and checks
+the image healthcheck, an HTTP response, a real TLS termination, a regex ACL
+(PCRE2), and that a broken configuration **prevents** the start.
+
+Versions live only in [`versions.json`](versions.json): the Dockerfile has no
+defaults, `make build` and CI pass them through `scripts/versions-build-args.py`,
+and a bare `docker build` stops at the guard.
+
+## Verification
+
+Images are signed with [cosign](https://github.com/sigstore/cosign) (keyless,
+GitHub OIDC) by the shared [hardened-ci](https://github.com/jbsky/hardened-ci)
+pipeline. The certificate names that workflow and, in an extension, this
+repository: the commands below require both.
+
+```bash
+# ghcr.io
+cosign verify ghcr.io/jbsky/haproxy-hardened:3.4.6.11 \
+  --certificate-identity-regexp '^https://github.com/(jbsky/haproxy-hardened|jbsky/hardened-ci)/' \
+  --certificate-github-workflow-repository jbsky/haproxy-hardened \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# Docker Hub (the signature is stored on ghcr.io)
+COSIGN_REPOSITORY=ghcr.io/jbsky/haproxy-hardened \
+  cosign verify docker.io/jbsky/haproxy-hardened:3.4.6.11 \
+  --certificate-identity-regexp '^https://github.com/(jbsky/haproxy-hardened|jbsky/hardened-ci)/' \
+  --certificate-github-workflow-repository jbsky/haproxy-hardened \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Each published digest also carries a CycloneDX SBOM (the `prep` stage the
+image is assembled from, plus its Go binaries), attested with cosign, and a
+GitHub SLSA build provenance attestation. The pipeline lints, builds, scans the
+`prep` stage with Trivy, tests the exact digest it is about to publish (image
+manifest, dependency closure, functional tests), then promotes and signs it.
+Base image digests follow upstream daily (`base-watch`), a fixable Alpine
+package CVE triggers a rebuild (`cve-watch`), and the published image is
+audited weekly (`security-audit`: Trivy, Grype, cosign). Audit status and
+documented exceptions: [`SECURITY.md`](SECURITY.md).
 
 ## License
 
-Le contenu de ce depot -- Dockerfile, `init.go`, scripts et chaine CI -- est sous
-**Apache-2.0**, voir [`LICENSE`](LICENSE). Copyright 2026 jbsky.
+The contents of this repository (Dockerfile, `init.go`, scripts and CI) are
+licensed under **Apache-2.0**, see [`LICENSE`](LICENSE). Copyright 2026 jbsky.
 
-HAProxy garde sa licence, **GPL-2.0-or-later** (avec exception OpenSSL). `init.go`
-est un programme distinct, qui execute HAProxy sans etre lie a lui.
+The software shipped in the image keeps its own license: **HAProxy is under
+GPL-2.0-or-later** (with an OpenSSL exception), and its libraries keep their
+upstream's. The two never mix: `init.go` is a separate program that executes
+HAProxy without being linked to it.
